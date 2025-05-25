@@ -144,4 +144,4 @@ Proyek ini dilisensikan di bawah Lisensi MIT.
 
 ## Kontak
 
-Untuk dukungan atau pertanyaan, hubungi tim pengembangan di <email-anda@contoh.com>.
+Untuk dukungan atau pertanyaan, hubungi tim pengembangan di <setiawanmuhammad3@gmail.com>.
