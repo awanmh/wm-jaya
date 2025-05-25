@@ -1,0 +1,231 @@
+wm_jaya/
+├── lib/
+│   ├── app/
+│   │   ├── app.dart
+│   │   └── routes.dart
+│   ├── constants/
+│   │   ├── app_colors.dart
+│   │   ├── app_constants.dart
+│   │   ├── app_strings.dart
+│   │   └── assets_path.dart
+│   ├── data/
+│   │   ├── local_db/
+│   │   │   ├── color_extension.dart
+│   │   │   ├── database_helper.dart
+│   │   │   ├── db_operations.dart
+│   │   │   └── migrations/
+│   │   ├── models/
+│   │   │   ├── app_settings.dart
+│   │   │   ├── fuel.dart
+│   │   │   ├── order.dart
+│   │   │   ├── product.dart
+│   │   │   ├── report.dart
+│   │   │   └── user.dart
+│   │   └── repositories/
+│   │       ├── auth_repository.dart
+│   │       ├── fuel_repository.dart
+│   │       ├── order_repository.dart
+│   │       ├── product_repository.dart
+│   │       ├── report_repository.dart
+│   │       └── settings_repository.dart
+│   ├── di/
+│   │   └── injector.dart
+│   ├── features/
+│   │   ├── auth/
+│   │   │   ├── presentation/
+│   │   │   │   ├── providers/
+│   │   │   │   │   └── auth_provider.dart
+│   │   │   │   ├── screens/
+│   │   │   │   │   ├── login_screen.dart
+│   │   │   │   │   └── reset_password_screen.dart
+│   │   │   │   └── widgets/
+│   │   │   └── domain/
+│   │   ├── dashboard/
+│   │   │   ├── presentation/
+│   │   │   │   ├── screens/
+│   │   │   │   │   └── home_screen.dart
+│   │   │   │   └── widgets/
+│   │   │   │       └── common/
+│   │   │   └── domain/
+│   │   ├── fuel/
+│   │   │   ├── presentation/
+│   │   │   │   ├── screens/
+│   │   │   │   │   ├── fuel_history_screen.dart
+│   │   │   │   │   └── fuel_purchase_screen.dart
+│   │   │   │   ├── providers/
+│   │   │   │   │   └── fuel_provider.dart
+│   │   │   │   └── widgets/
+│   │   │   └── domain/
+│   │   ├── order/
+│   │   │   ├── presentation/
+│   │   │   │   ├── screens/
+│   │   │   │   │   ├── order_create_screen.dart
+│   │   │   │   │   ├── order_detail_screen.dart
+│   │   │   │   │   └── receipt_screen.dart
+│   │   │   │   ├── providers/
+│   │   │   │   │   └── order_provider.dart
+│   │   │   │   └── widgets/
+│   │   │   └── domain/
+│   │   ├── product/
+│   │   │   ├── presentation/
+│   │   │   │   ├── screens/
+│   │   │   │   │   ├── categories_screen.dart
+│   │   │   │   │   ├── product_add_screen.dart
+│   │   │   │   │   ├── product_edit_screen.dart
+│   │   │   │   │   ├── product_screen.dart
+│   │   │   │   │   └── qr_scanner_screen.dart
+│   │   │   │   ├── providers/
+│   │   │   │   │   └── product_provider.dart
+│   │   │   │   └── widgets/
+│   │   │   └── domain/
+│   │   ├── report/
+│   │   │   ├── presentation/
+│   │   │   │   ├── screens/
+│   │   │   │   │   ├── report_screen.dart
+│   │   │   │   │   ├── report_detail_screen.dart
+│   │   │   │   │   ├── report_daily_screen.dart
+│   │   │   │   │   ├── report_weekly_screen.dart
+│   │   │   │   │   └── report_monthly_screem.dart
+│   │   │   │   ├── providers/
+│   │   │   │   │   └── report_provider.dart
+│   │   │   │   └── widgets/
+│   │   │   └── domain/
+│   │   └── settings/
+│   │       ├── presentation/
+│   │       │   ├── screens/
+│   │       │   │   ├── app_info_screen.dart
+│   │       │   │   ├── backup_restore_screen.dart
+│   │       │   │   └── settings_main_screen.dart
+│   │       │   └── widgets/
+│   │       └── domain/
+│   ├── locator/
+│   │   └── get_it.dart
+│   ├── providers/
+│   │   ├── auth_provider.dart
+│   │   ├── fuel_provider.dart
+│   │   ├── order_provider.dart
+│   │   ├── product_provider.dart
+│   │   ├── report_provider.dart
+│   │   └── settings_provider.dart
+│   ├── services/
+│   │   ├── google_drive_service.dart
+│   │   ├── local_auth_service.dart
+│   │   ├── pdf_servive.dart
+│   │   ├── printing_service.dart
+│   │   └── qr_service.dart
+│   ├── test/
+│   │   └── auth_provider_test.dart
+│   ├── utils/
+│   │   ├── dialog/
+│   │   │   ├── confirmation_dialog.dart
+│   │   │   └── error_dialog.dart
+│   │   ├── enums/
+│   │   │   ├── menu_type.dart
+│   │   │   └── report_type.dart
+│   │   ├── extensions/
+│   │   │   ├── context_extension.dart
+│   │   │   ├── datetime_extension.dart
+│   │   │   └── string_extension.dart
+│   │   ├── helpers/
+│   │   │   ├── currency_formatter.dart
+│   │   │   ├── date_formatter.dart
+│   │   │   ├── input_validator.dart
+│   │   │   ├── responsive_layout.dart
+│   │   │   └── security_helper.dart
+│   │   ├── theme/
+│   │   │   ├── app_theme.dart
+│   │   │   ├── button_theme.dart
+│   │   │   └── text_theme.dart
+│   │   ├── date_range.dart
+│   │   └── file_storage.dart
+│   ├── widgets/
+│   │   ├── charts/
+│   │   │   ├── fuel_usage_chart.dart
+│   │   │   └── sales_chart.dart
+│   │   ├── common/
+│   │   │   ├── app_appbar.dart
+│   │   │   ├── app_button.dart
+│   │   │   ├── app_card.dart
+│   │   │   ├── app_drawer.dart
+│   │   │   ├── app_textfield.dart
+│   │   │   └── qr_generator.dart
+│   │   └── reports/
+│   │       ├── report_char.dart
+│   │       └── report_table.dart
+└── └── main.dart
+
+name: wm_jaya
+description: Aplikasi manajemen toko sederhana dengan sistem CRUD offline.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.4 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  equatable: ^2.0.7
+  provider: ^6.1.2
+  sqflite: ^2.4.1
+  path: ^1.9.0
+  path_provider: ^2.1.5
+  intl: ^0.19.0
+  syncfusion_flutter_charts: ^28.2.11
+  material_design_icons_flutter: ^7.0.7296
+  flutter_form_builder: ^10.0.1
+  flutter_launcher_icons: ^0.14.3
+  fl_chart: ^0.70.2
+  http: ^1.2.1
+  pdf: ^3.11.3
+  printing: ^5.14.0
+  google_sign_in: ^6.2.2
+  googleapis: ^14.0.0
+  googleapis_auth: ^1.6.0
+  google_fonts: ^6.2.1
+  qr_flutter: ^4.1.0
+  qr_code_scanner_plus: ^2.0.10+1
+  flutter_secure_storage: ^9.2.4
+  crypto: ^3.0.6
+  file_picker: ^9.1.0
+  url_launcher: ^6.2.2
+  shared_preferences: ^2.2.3
+  synchronized: ^3.3.1
+  connectivity_plus: ^6.1.3
+  logger: ^2.5.0
+  local_auth: ^2.3.0
+  get_it: ^8.0.3
+  injectable: ^2.5.0
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mockito: ^5.4.5
+  flutter_lints: ^5.0.0
+  integration_test:
+    sdk: flutter
+  injectable_generator: ^2.7.0
+  build_runner: ^2.4.15
+  process_run: ^1.2.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fonts/materialdesignicons-webfont.ttf
+  fonts:
+    - family: MaterialDesignIcons
+      fonts:
+        - asset: assets/fonts/materialdesignicons-webfont.ttf
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/icon_foreground.png"
+
+buatkan saya dokumentasi atau README.md dari informasi aplikasi manajemen toko (wm jaya) diatas

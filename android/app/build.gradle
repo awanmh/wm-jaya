@@ -1,0 +1,47 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace "com.example.wm_jaya"  // Pastikan ini sesuai dengan package name aplikasi
+    compileSdk 35  // Sesuaikan dengan versi SDK terbaru yang digunakan
+
+    defaultConfig {
+        applicationId "com.example.wm_jaya"  // Harus sesuai dengan namespace
+        minSdk 21  // Minimum SDK yang didukung
+        targetSdk 35  // Target SDK untuk kompatibilitas
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    ndkVersion "27.0.12077973"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug  // Gantilah dengan konfigurasi signing release jika diperlukan
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+flutter {
+    source "../.."  // Pastikan ini menunjuk ke direktori Flutter yang benar
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.10.1' // Versi terbaru
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.13.0-alpha11'
+}

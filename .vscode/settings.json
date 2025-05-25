@@ -1,0 +1,8 @@
+{
+  "files.autoSave": "afterDelay",
+  "dart.previewHotReloadOnSaveWatcher": true,
+  "dart.flutterHotReloadOnSave": "all",
+  "dart.hotReloadOnSave": "all",
+  "CodeGPT.apiKey": "CodeGPT Plus Beta",
+  "cmake.sourceDirectory": "E:/WM jaya/wm_jaya/linux"
+}

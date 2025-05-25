@@ -1,0 +1,14 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="LaunchTheme" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+
+    <style name="NormalTheme" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+
+    <style name="AlertDialogCustom" parent="Theme.Material3.DayNight.Dialog.Alert">
+    <item name="dialogCornerRadius">16dp</item>
+    <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Corner16dp</item>
+</style>
+</resources>

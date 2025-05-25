@@ -1,0 +1,5 @@
+<resources>
+    <color name="window_background">#121212</color> <!-- Latar belakang mode gelap -->
+    <color name="alertDialogBackground">#2C2C2C</color> <!-- Latar belakang dialog -->
+    <color name="alertDialogText">#FFFFFF</color> <!-- Warna teks dialog -->
+</resources>

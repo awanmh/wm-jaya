@@ -1,0 +1,6 @@
+<resources>
+    <color name="window_background">#FFFFFF</color> <!-- Latar belakang default (terang) -->
+    <color name="alertDialogBackground">#F5F5F5</color> <!-- Latar belakang dialog -->
+    <color name="alertDialogText">#000000</color> <!-- Warna teks dialog -->
+	<color name="ic_launcher_background">#ffffff</color>
+</resources>

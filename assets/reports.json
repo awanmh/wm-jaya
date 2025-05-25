@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "totalSales": 1000.0,
+    "date": "2025-02-02T14:30:00.000Z",
+    "soldProducts": [
+      {
+        "productName": "Produk A",
+        "quantity": 10,
+        "price": 50.0,
+        "total": 500.0
+      }
+    ]
+  }
+]
