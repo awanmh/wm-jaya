@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wm_jaya/constants/app_colors.dart';
 
 class BackupRestoreScreen extends StatelessWidget {
   const BackupRestoreScreen({super.key});
@@ -7,6 +8,8 @@ class BackupRestoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         title: const Text('Backup & Restore'),
       ),
       body: Padding(

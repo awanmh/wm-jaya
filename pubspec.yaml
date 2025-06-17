@@ -58,16 +58,24 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # PERBAIKAN: Indentasi dan struktur di bagian ini diperbaiki.
+  # Pastikan Anda memiliki folder `assets` dan sub-folder `images`
+  # atau sesuaikan path-nya dengan struktur folder Anda.
   assets:
-    - assets/fonts/materialdesignicons-webfont.ttf
+    - assets/fonts/
+    - assets/images/
+
   fonts:
     - family: MaterialDesignIcons
       fonts:
         - asset: assets/fonts/materialdesignicons-webfont.ttf
 
+# Konfigurasi untuk package flutter_launcher_icons
+# Pastikan file icon.png ada di dalam folder `assets/images/` atau `assets/`
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/icon.png"
+  image_path: "assets/images/icon.png" 
   adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/icon_foreground.png"
+  adaptive_icon_foreground: "assets/images/icon_foreground.png"

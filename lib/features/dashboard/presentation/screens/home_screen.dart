@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:wm_jaya/constants/app_colors.dart';
 import 'package:wm_jaya/features/auth/presentation/providers/auth_provider.dart';
 import 'package:wm_jaya/features/product/presentation/screens/product_screen.dart';
 import 'package:wm_jaya/features/order/presentation/screens/order_create_screen.dart';
@@ -44,7 +45,7 @@ class HomeScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.amber[600],
+        color: AppColors.primary,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -54,10 +55,11 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text('Selamat Datang', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-          const Text('Kelola Toko dengan Mudah', style: TextStyle(fontSize: 18, color: Colors.white70)),
+          const Text('Selamat Datang', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.tertiary)),
+          const Text('Kelola Toko dengan Mudah', style: TextStyle(fontSize: 18, color: AppColors.quartenary)),
           const SizedBox(height: 16),
-          Text('WM JAYA', style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text('WM', style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold, color: AppColors.quartenary)),
+          Text('JAYA', style: TextStyle(fontSize: 60, fontWeight: FontWeight.bold, color: AppColors.tertiary))
         ],
       ),
     );
@@ -67,7 +69,7 @@ class HomeScreen extends StatelessWidget {
     return Center(
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.amber[600],
+          backgroundColor: AppColors.primary,
           foregroundColor: Colors.blue[900],
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -75,8 +77,8 @@ class HomeScreen extends StatelessWidget {
           elevation: 8,
         ),
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => OrderCreateScreen())),
-        icon: Icon(MdiIcons.cart, color: Colors.blue[900]),
-        label: const Text('Pesanan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        icon: Icon(MdiIcons.cart, color: AppColors.tertiary),
+        label: const Text('Pesanan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.tertiary)),
       ),
     );
   }
@@ -102,7 +104,7 @@ class HomeScreen extends StatelessWidget {
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => item['screen'])),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: const Offset(0, 4))],
         ),
@@ -110,9 +112,9 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(item['icon'], color: Colors.blue[900], size: 40),
+            Icon(item['icon'], color: AppColors.tertiary, size: 40),
             const SizedBox(height: 10),
-            Text(item['label'], textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue[900]))
+            Text(item['label'], textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.tertiary))
           ],
         ),
       ),

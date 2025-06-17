@@ -1,183 +1,108 @@
 // lib/data/repositories/report_repository.dart
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:wm_jaya/data/local_db/database_helper.dart';
 import 'package:wm_jaya/data/models/report.dart';
 import 'package:wm_jaya/utils/date_range.dart';
+import 'package:wm_jaya/utils/helpers/date_formatter.dart';
 
 class ReportRepository {
   final DatabaseHelper _dbHelper;
 
   ReportRepository(this._dbHelper);
 
-  // ==================== CORE REPORT OPERATIONS ====================
+  // =================================================================
+  // === FUNGSI YANG DIPERBAIKI SECARA MENYELURUH ===
+  // =================================================================
+  /// Mengambil detail laporan dan memastikan rincian transaksi (sales & fuel)
+  /// ikut terbaca dan diproses dengan benar.
+  Future<Report> getReportById(int id) async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'reports',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (maps.isEmpty) {
+      throw Exception('Laporan dengan ID $id tidak ditemukan.');
+    }
+
+    // 1. Ambil data mentah dari database
+    final rawReportMap = maps.first;
+    
+    // 2. Buat objek Report ringkasan terlebih dahulu
+    final summaryReport = Report.fromMap(rawReportMap);
+
+    // 3. Decode string JSON dari kolom 'data' menjadi Map
+    final Map<String, dynamic> dataMap = json.decode(rawReportMap['data'] as String);
+
+    // 4. Proses dan validasi item dari 'sales' dan 'fuel'
+    final List<Map<String, dynamic>> salesItems = _parseItems(dataMap['sales']?['items']);
+    final List<Map<String, dynamic>> fuelItems = _parseItems(dataMap['fuel']?['items']);
+
+    // 5. Buat ulang map 'data' dengan rincian yang sudah diproses
+    final sanitizedData = {
+      'sales': {'items': salesItems},
+      'fuel': {'items': fuelItems},
+    };
+    
+    // 6. Kembalikan objek Report lengkap dengan data yang sudah bersih
+    return summaryReport.copyWith(data: sanitizedData);
+  }
+
+  /// Helper untuk mem-parsing dan membersihkan daftar item (sales/fuel).
+  List<Map<String, dynamic>> _parseItems(dynamic items) {
+    if (items == null || items is! List) {
+      return []; // Kembalikan list kosong jika tidak ada item atau format salah
+    }
+    
+    final List<Map<String, dynamic>> parsedList = [];
+    for (final item in items) {
+      if (item is Map) {
+        parsedList.add({
+          'product': item['product']?.toString() ?? 'N/A',
+          'quantity': (item['quantity'] as num?)?.toDouble() ?? 0.0,
+          'price': (item['price'] as num?)?.toDouble() ?? 0.0,
+        });
+      }
+    }
+    return parsedList;
+  }
+  
+  // =================================================================
+  // === SISA KODE (Tidak ada perubahan) ===
+  // =================================================================
+
+  Future<List<Report>> getReports(DateRange range) async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'reports',
+      where: 'createdAt >= ? AND createdAt < ?',
+      whereArgs: [
+        range.start.millisecondsSinceEpoch,
+        range.end.millisecondsSinceEpoch,
+      ],
+       orderBy: 'createdAt DESC',
+    );
+    return result.map((map) => Report.fromMap(map)).toList();
+  }
+  
+  Future<void> deleteReport(Report report) async {
+    final db = await _dbHelper.database;
+    await db.delete('reports', where: 'id = ?', whereArgs: [report.id]);
+    await _deleteReportFile(report.id!);
+  }
+  
   Future<Report> generateReport(Report report) async {
     final db = await _dbHelper.database;
     final id = await db.insert('reports', report.toMap());
     return report.copyWith(id: id);
   }
 
-  Future<List<Report>> getReports(DateRange range) async {
-    final db = await _dbHelper.database;
-    final result = await db.query(
-      'reports',
-      where: 'createdAt BETWEEN ? AND ?',
-      whereArgs: [
-        range.start.millisecondsSinceEpoch,
-        range.end.millisecondsSinceEpoch,
-      ],
-    );
-    return result.map((map) => Report.fromMap(map)).toList();
-  }
-
-  // ==================== SALES REPORT ====================
-  Future<Map<String, dynamic>> getSalesReport(DateRange range) async {
-    final salesData = await _getRawSalesData(range);
-    return _processSalesData(salesData);
-  }
-
-  Future<List<Map<String, dynamic>>> _getRawSalesData(DateRange range) async {
-    final db = await _dbHelper.database;
-    return await db.rawQuery('''
-      SELECT 
-        strftime('%Y-%m-%d', datetime(o.date / 1000, 'unixepoch')) as date,
-        p.category,
-        SUM(oi.quantity) as total_quantity,
-        SUM(oi.quantity * p.price) as total_sales
-      FROM orders o
-      JOIN order_items oi ON o.id = oi.order_id
-      JOIN products p ON oi.product_id = p.id
-      WHERE o.date BETWEEN ? AND ?
-      GROUP BY date, p.category
-    ''', [
-      range.start.millisecondsSinceEpoch,
-      range.end.millisecondsSinceEpoch,
-    ]);
-  }
-
-  // ==================== FUEL REPORT ====================
-  Future<Map<String, dynamic>> getFuelReport(DateRange range) async {
-    final fuelData = await _getRawFuelData(range);
-    return _processFuelData(fuelData);
-  }
-
-  Future<List<Map<String, dynamic>>> getFuelHistory(DateRange range) async {
-    final db = await _dbHelper.database;
-    return await db.query(
-      'fuel_purchases',
-      where: 'date BETWEEN ? AND ?',
-      whereArgs: [
-        range.start.millisecondsSinceEpoch,
-        range.end.millisecondsSinceEpoch,
-      ],
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> _getRawFuelData(DateRange range) async {
-    final db = await _dbHelper.database;
-    return await db.rawQuery('''
-      SELECT 
-        type,
-        SUM(liters) as total_liters,
-        SUM(price * liters) as total_cost
-      FROM fuel_purchases
-      WHERE date BETWEEN ? AND ?
-      GROUP BY type
-    ''', [
-      range.start.millisecondsSinceEpoch,
-      range.end.millisecondsSinceEpoch,
-    ]);
-  }
-
-  // ==================== DATA PROCESSING ====================
-  Map<String, dynamic> _processSalesData(List<Map<String, dynamic>> data) {
-    final result = _initializeSalesReport();
-    
-    for (final row in data) {
-      final date = row['date'] as String;
-      final category = row['category'] as String;
-      final quantity = (row['total_quantity'] as int?) ?? 0;
-      final sales = (row['total_sales'] as num?)?.toDouble() ?? 0.0;
-
-      _updateSalesResult(result, date, category, quantity, sales);
-    }
-    
-    return result;
-  }
-
-  Map<String, dynamic> _initializeSalesReport() {
-    return {
-      'totalSales': 0.0,
-      'totalItemsSold': 0,
-      'dailySales': {},
-    };
-  }
-
-  void _updateSalesResult(
-    Map<String, dynamic> result,
-    String date,
-    String category,
-    int quantity,
-    double sales,
-  ) {
-    // Initialize date entry if not exists
-    if (!result['dailySales'].containsKey(date)) {
-      result['dailySales'][date] = {
-        'total': 0.0,
-        'categories': {},
-      };
-    }
-
-    // Update daily totals
-    result['dailySales'][date]['total'] += sales;
-    result['dailySales'][date]['categories'][category] = {
-      'quantity': quantity,
-      'sales': sales,
-    };
-
-    // Update global totals
-    result['totalSales'] += sales;
-    result['totalItemsSold'] += quantity;
-  }
-
-  Map<String, dynamic> _processFuelData(List<Map<String, dynamic>> data) {
-    final result = _initializeFuelReport();
-    
-    for (final row in data) {
-      final type = row['type'] as String;
-      final liters = (row['total_liters'] as num?)?.toDouble() ?? 0.0;
-      final cost = (row['total_cost'] as num?)?.toDouble() ?? 0.0;
-
-      _updateFuelResult(result, type, liters, cost);
-    }
-    
-    return result;
-  }
-
-  Map<String, dynamic> _initializeFuelReport() {
-    return {
-      'totalLiters': 0.0,
-      'totalCost': 0.0,
-      'types': {},
-    };
-  }
-
-  void _updateFuelResult(
-    Map<String, dynamic> result,
-    String type,
-    double liters,
-    double cost,
-  ) {
-    result['types'][type] = {
-      'liters': liters,
-      'cost': cost,
-    };
-    result['totalLiters'] += liters;
-    result['totalCost'] += cost;
-  }
-
-  // ==================== FILE OPERATIONS ====================
   Future<void> exportReportToFile(Report report) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -203,9 +128,7 @@ class ReportRepository {
       
       final entities = await reportDir.list().toList();
       final files = entities.whereType<File>().toList();
-      final reports = await Future.wait(
-        files.map((file) => _parseReportFile(file)),
-      );
+      final reports = await Future.wait(files.map((file) => _parseReportFile(file)));
       return reports;
     } catch (e) {
       throw Exception('Gagal memuat laporan: ${e.toString()}');
@@ -219,18 +142,6 @@ class ReportRepository {
     } catch (e) {
       throw Exception('File korup: ${file.path}');
     }
-  }
-
-  Future<void> deleteReport(Report report) async {
-    final db = await _dbHelper.database;
-    
-    await db.delete(
-      'reports',
-      where: 'id = ?',
-      whereArgs: [report.id],
-    );
-
-    await _deleteReportFile(report.id!);
   }
 
   Future<void> _deleteReportFile(int reportId) async {

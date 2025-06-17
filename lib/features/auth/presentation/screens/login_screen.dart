@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: TextStyle(
             fontSize: 40,
             fontWeight: FontWeight.bold,
-            color: AppColors.background,
+            color: AppColors.quartenary,
             letterSpacing: 1.5,
             shadows: const [
               Shadow(
@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
           AppStrings.appTagline,
           style: TextStyle(
             fontSize: 16,
-            color: AppColors.background.withAlpha((0.9 * 255).toInt()),
+            color: AppColors.tertiary.withAlpha((0.9 * 255).toInt()),
             fontStyle: FontStyle.italic,
           ),
         ),

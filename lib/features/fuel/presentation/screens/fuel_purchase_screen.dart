@@ -11,6 +11,8 @@ import 'package:wm_jaya/widgets/common/app_textfield.dart';
 import 'package:wm_jaya/data/models/report.dart';
 import 'package:wm_jaya/data/repositories/report_repository.dart';
 import 'package:wm_jaya/features/report/presentation/screens/report_screen.dart';
+import 'package:wm_jaya/features/report/presentation/providers/report_provider.dart';
+
 
 class FuelPurchaseScreen extends StatefulWidget {
   const FuelPurchaseScreen({super.key});
@@ -67,13 +69,22 @@ class FuelPurchaseScreenState extends State<FuelPurchaseScreen> {
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: Scaffold(
-        appBar: AppBar(title: const Text(AppStrings.fuelTitle)),
+        appBar: AppBar(backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.tertiary,
+        title: const Text(AppStrings.fuelTitle),
+        titleTextStyle: const TextStyle(
+          color: AppColors.tertiary,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
             child: Card(
               elevation: 4.0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -225,6 +236,7 @@ class FuelPurchaseScreenState extends State<FuelPurchaseScreen> {
 
       final price = double.parse(_priceController.text);
       final liters = double.parse(_literController.text);
+      final pricePerLiter = double.tryParse(_pricePerLiterController.text) ?? 0;
 
       // Simpan ke fuel_purchases
       final fuelPurchase = {
@@ -235,7 +247,15 @@ class FuelPurchaseScreenState extends State<FuelPurchaseScreen> {
       };
       await dbHelper.insertFuelPurchase(fuelPurchase);
 
-      // Generate report
+      // --- PERBAIKAN UTAMA DI SINI ---
+      // Membuat format rincian yang konsisten
+      final fuelItems = [{
+        'product': _typeController.text, // Nama produk (misal: Pertalite)
+        'quantity': liters,             // Jumlah liter
+        'price': pricePerLiter,         // Harga per liter
+      }];
+
+      // Membuat objek laporan dengan struktur data yang benar
       final report = Report(
         type: ReportType.daily,
         total: price,
@@ -243,13 +263,16 @@ class FuelPurchaseScreenState extends State<FuelPurchaseScreen> {
         period: DateTime.now(),
         createdAt: DateTime.now(),
         data: {
-          'category': 'fuel',
-          'type': _typeController.text,
-          'liters': liters,
-          'price_per_liter': double.parse(_pricePerLiterController.text),
+          'sales': {'items': []}, // List penjualan dikosongkan
+          'fuel': {'items': fuelItems}, // List BBM diisi dengan data
         },
       );
       await reportRepo.generateReport(report);
+
+      // Reload laporan di provider
+      if (mounted) {
+        await context.read<ReportProvider>().loadReports();
+      }
 
       _showSnackBar(AppStrings.fuelSaveSuccess, isError: false, onNavigation: () {
         Navigator.pushReplacement(
@@ -274,9 +297,8 @@ class FuelPurchaseScreenState extends State<FuelPurchaseScreen> {
       ),
     );
     if (onNavigation != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        onNavigation();
-      });
+      // Tunggu snackbar selesai sebelum navigasi
+      Future.delayed(const Duration(seconds: 2), onNavigation);
     }
   }
 
@@ -285,9 +307,5 @@ class FuelPurchaseScreenState extends State<FuelPurchaseScreen> {
     _priceController.clear();
     _literController.clear();
     _updatePricePerLiter();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const ReportScreen()),
-    );
   }
 }

@@ -1,5 +1,5 @@
 // lib/data/repositories/order_repository.dart
-// lib/data/repositories/order_repository.dart
+import 'dart:convert'; // Import dart:convert untuk menggunakan json.decode
 import 'package:wm_jaya/data/local_db/database_helper.dart';
 import 'package:wm_jaya/data/models/order.dart';
 import 'package:wm_jaya/data/models/product.dart';
@@ -22,12 +22,10 @@ class OrderRepository {
 
         for (final item in order.items) {
           debugPrint('🔹 Mengupdate stok produk: ID ${item.product.id} | Stok sebelum: ${item.product.stock}');
-          if (item.product.stock < item.quantity) {
-            throw Exception('🚨 Stok tidak mencukupi untuk produk ID: ${item.product.id}');
-          }
+          // Perhitungan stok sudah ditangani di provider, di sini kita hanya menyimpan
           await txn.update(
             'products',
-            {'stock': item.product.stock - item.quantity},
+            {'stock': item.product.stock}, // Simpan stok terbaru
             where: 'id = ?',
             whereArgs: [item.product.id],
           );
@@ -42,6 +40,64 @@ class OrderRepository {
       }
     });
   }
+  
+  // === FUNGSI YANG DIPERBAIKI SECARA MENYELURUH ===
+  /// 📌 **Menghapus Order dan Mengembalikan Stok**
+  Future<void> deleteOrderAndRestoreStock(int orderId) async {
+    final db = await _dbHelper.database;
+    await db.transaction((txn) async {
+      try {
+        // 1. Ambil data order yang akan dihapus
+        final orderData = await txn.query(
+          'orders',
+          where: 'id = ?',
+          whereArgs: [orderId],
+          limit: 1,
+        );
+
+        if (orderData.isEmpty) {
+          throw Exception('Pesanan dengan ID $orderId tidak ditemukan.');
+        }
+
+        // 2. Decode item-item dari string JSON
+        final List<dynamic> items = json.decode(orderData.first['items'] as String);
+
+        // 3. Kembalikan stok untuk setiap produk
+        for (final item in items) {
+          // PERBAIKAN: Cara membaca 'product_id' dan 'quantity' dibuat lebih aman
+          // Ini untuk menangani kasus jika 'item' berisi map 'product' di dalamnya.
+          final Map<String, dynamic>? productMap = item['product'] as Map<String, dynamic>?;
+          final int? productId = productMap?['id'] as int? ?? item['product_id'] as int?;
+          final int? quantity = item['quantity'] as int?;
+
+          // Lanjutkan hanya jika productId dan quantity valid
+          if (productId != null && quantity != null && quantity > 0) {
+            // Tambahkan kembali stok yang dibatalkan
+            await txn.rawUpdate(
+              'UPDATE products SET stock = stock + ? WHERE id = ?',
+              [quantity, productId],
+            );
+            debugPrint('✅ Stok dikembalikan untuk produk ID $productId sebanyak $quantity');
+          } else {
+            debugPrint('⚠️ Gagal mengembalikan stok: productId atau quantity tidak valid. Item: $item');
+          }
+        }
+
+        // 4. Hapus pesanan dari tabel 'orders'
+        await txn.delete(
+          'orders',
+          where: 'id = ?',
+          whereArgs: [orderId],
+        );
+        debugPrint('✅ Pesanan ID $orderId berhasil dibatalkan dan dihapus.');
+
+      } catch (e) {
+        debugPrint('❌ ERROR di deleteOrderAndRestoreStock: $e');
+        rethrow; // Lempar kembali error agar bisa ditangani oleh provider
+      }
+    });
+  }
+
 
   /// 📌 **Mengambil Semua Produk**
   Future<List<Product>> getProducts() async {

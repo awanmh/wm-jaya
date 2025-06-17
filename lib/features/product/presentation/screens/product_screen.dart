@@ -16,56 +16,67 @@ class ProductScreen extends StatefulWidget {
 }
 
 class ProductScreenState extends State<ProductScreen> {
-  late Future<void> _loadProductsFuture;
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadProductsFuture = _loadProducts();
-  }
-
-  Future<void> _loadProducts() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    _searchController.addListener(() {
+      setState(() {}); // Memicu rebuild saat teks pencarian berubah
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<ProductProvider>().loadProducts();
       }
     });
   }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Map<String, dynamic> _getCategoryStyle(String category) {
+    String lowerCategory = category.toLowerCase();
+    if (lowerCategory.contains('makanan')) return {'icon': Icons.fastfood_outlined, 'color': Colors.orange.shade700};
+    if (lowerCategory.contains('minuman')) return {'icon': Icons.local_cafe_outlined, 'color': Colors.blue.shade700};
+    if (lowerCategory.contains('rokok')) return {'icon': Icons.smoking_rooms_outlined, 'color': Colors.brown.shade700};
+    if (lowerCategory.contains('bensin') || lowerCategory.contains('bbm')) return {'icon': Icons.local_gas_station_outlined, 'color': Colors.red.shade700};
+    if (lowerCategory.contains('kebutuhan')) return {'icon': Icons.shopping_basket_outlined, 'color': Colors.green.shade700};
+    return {'icon': Icons.category_outlined, 'color': AppColors.primary};
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: _buildAppBar(context),
-      body: FutureBuilder(
-        future: _loadProductsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoading();
-          }
-          return _buildCategoryGrid();
-        },
+      body: Column(
+        children: [
+          _buildSearchBar(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => context.read<ProductProvider>().loadProducts(),
+              color: AppColors.primary,
+              child: _buildBody(),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
-      title: Text(
-        AppStrings.productTitle,
-        style: GoogleFonts.montserrat(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-          color: Colors.white,
-        ),
-      ),
+      title: Text(AppStrings.productTitle, style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
       backgroundColor: AppColors.primary,
-      elevation: 0,
+      foregroundColor: AppColors.tertiary,
+      elevation: 1,
       centerTitle: true,
       actions: [
         IconButton(
-          icon: const Icon(Icons.add, size: 28),
+          icon: const Icon(Icons.add_circle_outline),
           onPressed: () => _navigateToAddProduct(context),
           tooltip: 'Tambah Produk',
         ),
@@ -73,21 +84,124 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
 
-  Widget _buildLoading() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(
-            strokeWidth: 2.5,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Cari kategori produk...',
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Memuat produk...',
-            style: GoogleFonts.poppins(
-              color: Colors.grey.shade600,
-              fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    return Consumer<ProductProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading && provider.categories.isEmpty) return _buildLoading();
+        
+        // Filter kategori berdasarkan query pencarian
+        final searchQuery = _searchController.text.toLowerCase();
+        final filteredCategories = provider.categories.where((cat) {
+          return cat.toLowerCase().contains(searchQuery);
+        }).toList();
+
+        if (filteredCategories.isEmpty) {
+          return _buildEmptyState(isSearchResult: searchQuery.isNotEmpty);
+        }
+        
+        return _buildCategoryGrid(provider, filteredCategories);
+      },
+    );
+  }
+
+  Widget _buildLoading() {
+    return const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)));
+  }
+
+  Widget _buildCategoryGrid(ProductProvider provider, List<String> categories) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16.0),
+      physics: const BouncingScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.9,
+      ),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        final productCount = provider.products.where((p) => p.category == category).length;
+        return _buildCategoryCard(category, productCount);
+      },
+    );
+  }
+
+  Widget _buildCategoryCard(String category, int productCount) {
+    final style = _getCategoryStyle(category);
+    final IconData icon = style['icon'];
+    final Color color = style['color'];
+
+    return GestureDetector(
+      onTap: () => _navigateToProductList(context, category),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey[200]!),
+              boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), spreadRadius: 1, blurRadius: 10)],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(0.1)),
+                  child: Icon(icon, size: 36, color: color),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  category,
+                  style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black87),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$productCount Produk',
+                  style: GoogleFonts.lato(fontSize: 13, color: Colors.grey.shade600),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: Colors.grey[600]),
+              onSelected: (value) {
+                if (value == 'edit') _showEditCategoryDialog(context, category);
+                if (value == 'delete') _showDeleteCategoryDialog(context, category);
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(value: 'edit', child: Text('Ubah Nama')),
+                const PopupMenuItem<String>(value: 'delete', child: Text('Hapus Kategori', style: TextStyle(color: Colors.red))),
+              ],
             ),
           ),
         ],
@@ -95,107 +209,97 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
 
-  Widget _buildCategoryGrid() {
-    return Consumer<ProductProvider>(
-      builder: (context, provider, _) {
-        final categories = provider.categories.toSet().toList();
-        if (categories.isEmpty) {
-          return _buildEmptyState();
-        }
+  void _showEditCategoryDialog(BuildContext context, String oldCategory) {
+    final formKey = GlobalKey<FormState>();
+    final controller = TextEditingController(text: oldCategory);
+    final productProvider = context.read<ProductProvider>();
 
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: GridView.builder(
-            physics: const BouncingScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.1,
-            ),
-            itemCount: categories.length,
-            itemBuilder: (context, index) => _buildCategoryCard(categories[index]),
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Ubah Nama Kategori', style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Nama Kategori Baru', border: OutlineInputBorder()),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) return 'Nama tidak boleh kosong';
+              if (productProvider.categories.any((cat) => cat.toLowerCase() == value.trim().toLowerCase() && cat.toLowerCase() != oldCategory.toLowerCase())) {
+                return 'Nama kategori sudah ada';
+              }
+              return null;
+            },
           ),
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Batal', style: GoogleFonts.lato(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final newCategory = controller.text.trim();
+                productProvider.updateCategory(oldCategory, newCategory).then((_) {
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kategori berhasil diubah ke "$newCategory"')));
+                }).catchError((e) {
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengubah kategori: $e'), backgroundColor: Colors.red));
+                });
+                Navigator.pop(dialogContext);
+              }
+            },
+            child: Text('Simpan', style: GoogleFonts.lato()),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildCategoryCard(String category) {
-    return Material(
-      borderRadius: BorderRadius.circular(16),
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _navigateToProductList(context, category),
-        splashColor: AppColors.primary.withOpacity(0.1),
-        child: Stack(
+  void _showDeleteCategoryDialog(BuildContext context, String category) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Hapus Kategori?', style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
+        content: Text('Semua produk dalam kategori "$category" akan dihapus permanen. Tindakan ini tidak dapat diurungkan.', style: GoogleFonts.lato()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Batal', style: GoogleFonts.lato(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<ProductProvider>().deleteCategory(category);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kategori "$category" telah dihapus.'), backgroundColor: Colors.green));
+            },
+            child: Text('Hapus', style: GoogleFonts.lato(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildEmptyState({bool isSearchResult = false}) {
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 2,
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.category_rounded,
-                    size: 48,
-                    color: AppColors.primary.withOpacity(0.8),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text(
-                      category,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade800,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+            Icon(isSearchResult ? Icons.search_off : Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 24),
+            Text(
+              isSearchResult ? 'Kategori Tidak Ditemukan' : 'Belum Ada Kategori Produk',
+              style: GoogleFonts.lato(fontSize: 18, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
             ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: Colors.grey.shade600,
-                  size: 20,
-                ),
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.delete, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Hapus',
-                          style: GoogleFonts.poppins(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                onSelected: (value) => _deleteCategory(context, category),
-              ),
+            const SizedBox(height: 8),
+            Text(
+              isSearchResult ? 'Coba kata kunci lain untuk menemukan kategori.' : 'Tekan tombol + untuk menambahkan produk baru.',
+              style: GoogleFonts.lato(fontSize: 14, color: Colors.grey.shade500),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -203,102 +307,13 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            'assets/images/empty_box.png',
-            width: 120,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Belum ada kategori produk',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () => _navigateToAddProduct(context),
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(
-              'Tambah Kategori Baru',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w500,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _navigateToAddProduct(BuildContext context) {
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const ProductAddScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.5),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          );
-        },
-      ),
-    ).then((_) {
-      if (context.mounted) {
-        context.read<ProductProvider>().loadProducts();
-      }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductAddScreen())).then((_) {
+      if (mounted) context.read<ProductProvider>().loadProducts();
     });
   }
 
-  void _deleteCategory(BuildContext context, String category) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Hapus Kategori?',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'Semua produk dalam kategori "$category" akan dihapus permanen',
-          style: GoogleFonts.poppins(),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Batal', style: GoogleFonts.poppins()),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<ProductProvider>().deleteCategory(category);
-              Navigator.pop(context);
-            },
-            child: Text(
-              'Hapus',
-              style: GoogleFonts.poppins(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _navigateToProductList(BuildContext context, String category) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProductListScreen(category: category),
-      ),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (context) => ProductListScreen(category: category)));
   }
 }

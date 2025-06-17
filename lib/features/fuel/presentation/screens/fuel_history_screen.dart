@@ -1,6 +1,7 @@
 // lib/features/fuel/presentation/screens/fuel_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wm_jaya/constants/app_colors.dart';
 import 'package:wm_jaya/data/local_db/database_helper.dart';
 import 'package:wm_jaya/utils/helpers/date_formatter.dart';
 import 'package:wm_jaya/widgets/common/app_card.dart';
@@ -11,7 +12,7 @@ class FuelHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dbHelper = Provider.of<DatabaseHelper>(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Riwayat Pengisian Bahan Bakar'),
@@ -28,7 +29,7 @@ class FuelHistoryScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('Tidak ada riwayat pengisian'));
           }
@@ -36,7 +37,8 @@ class FuelHistoryScreen extends StatelessWidget {
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) => _buildFuelItem(snapshot.data![index]),
+            itemBuilder: (context, index) =>
+                _buildFuelItem(snapshot.data![index]),
           );
         },
       ),
@@ -45,7 +47,7 @@ class FuelHistoryScreen extends StatelessWidget {
 
   Widget _buildFuelItem(Map<String, dynamic> purchase) {
     final date = DateTime.fromMillisecondsSinceEpoch(purchase['date']);
-    
+
     return AppCard(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -61,7 +63,7 @@ class FuelHistoryScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                    backgroundColor: AppColors.primary,
                   ),
                 ),
                 Text(
@@ -71,11 +73,11 @@ class FuelHistoryScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            _buildDetailRow('Harga per Liter', 
+            _buildDetailRow('Harga per Liter',
                 'Rp ${purchase['price'].toStringAsFixed(0)}'),
-            _buildDetailRow('Jumlah Liter', 
-                '${purchase['liters'].toStringAsFixed(2)} L'),
-            _buildDetailRow('Total Biaya', 
+            _buildDetailRow(
+                'Jumlah Liter', '${purchase['liters'].toStringAsFixed(2)} L'),
+            _buildDetailRow('Total Biaya',
                 'Rp ${(purchase['price'] * purchase['liters']).toStringAsFixed(0)}'),
           ],
         ),

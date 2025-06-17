@@ -39,7 +39,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(AppStrings.orderDetails(widget.orderId)),
+        titleTextStyle: const TextStyle(
+          color: AppColors.tertiary,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
         backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.tertiary,
+        // Menambahkan tombol hapus di AppBar jika pesanan belum dilaporkan
+        actions: [
+          if (orderProvider.currentOrder != null && !orderProvider.currentOrder!.reportGenerated)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Batalkan Pesanan',
+              onPressed: () => _showCancelConfirmation(context),
+            )
+        ],
       ),
       body: orderProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -67,7 +82,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 16),
           Expanded(child: _buildOrderItemsList(order)),
           _buildTotalSection(order.total),
-          _buildActionButtons(),
+          // Hanya tampilkan tombol jika laporan belum dibuat
+          if (!order.reportGenerated) _buildActionButtons(),
         ],
       ),
     );
@@ -153,102 +169,156 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          ElevatedButton.icon(
-            onPressed: () {
-              // Navigasi ke ReceiptScreen dengan orderId
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ReceiptScreen(orderId: widget.orderId),
-                ),
-              );
-            },
-            icon: const Icon(Icons.print),
-            label: const Text("Cetak Struk"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondary,
-              foregroundColor: Colors.white,
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReceiptScreen(orderId: widget.orderId),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.print),
+              label: const Text("Cetak Struk"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
             ),
           ),
-          ElevatedButton.icon(
-            onPressed: _completeOrder,
-            icon: const Icon(Icons.check),
-            label: const Text("Selesai"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+          const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _completeOrder,
+              icon: const Icon(Icons.check),
+              label: const Text("Selesai"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.tertiary,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+  
+  // === FUNGSI BARU UNTUK KONFIRMASI & PEMBATALAN ===
+  Future<void> _showCancelConfirmation(BuildContext context) async {
+    final orderProvider = context.read<OrderProvider>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-  Future<void> _completeOrder() async {
-  final orderProvider = context.read<OrderProvider>();
-  final reportRepo = context.read<ReportRepository>();
-  final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-  try {
-    final currentOrder = orderProvider.currentOrder;
-    if (currentOrder == null) {
-      throw Exception('Order tidak ditemukan');
-    }
-
-    // Konversi items ke format JSON
-    final itemsData = currentOrder.items.map((item) {
-      return {
-        'product': item.product.name,
-        'quantity': item.quantity,
-        'price': item.product.price.toDouble(),
-      };
-    }).toList();
-
-    final report = Report(
-      type: ReportType.daily,
-      total: currentOrder.total,
-      date: DateTime.now(),
-      period: DateTime.now(),
-      createdAt: DateTime.now(),
-      data: {'category': 'sales', 'items': itemsData},
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Batalkan Pesanan?'),
+        content: const Text('Stok produk akan dikembalikan. Tindakan ini tidak dapat diurungkan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Tidak'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
 
-    // Simpan laporan
-    await reportRepo.generateReport(report);
+    if (confirmed == true) {
+      try {
+        // PENTING: Anda perlu membuat fungsi cancelOrder di OrderProvider
+        await orderProvider.cancelOrder(widget.orderId);
+        
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Pesanan berhasil dibatalkan.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        // Kembali ke layar sebelumnya setelah berhasil
+        if (mounted) Navigator.pop(context);
 
-    if (mounted) {
-      // Update status order hanya jika laporan berhasil disimpan
-      await orderProvider.markOrderAsReported(widget.orderId);
-      await context.read<ReportProvider>().loadReports();
-
-      // Navigasi ke ReportScreen
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const ReportScreen()),
+      } catch (e) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Gagal membatalkan pesanan: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
-
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('Laporan berhasil disimpan!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  } catch (e, stackTrace) {
-    debugPrint('Error completing order: $e\n$stackTrace');
-
-    if (mounted) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Gagal: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
     }
   }
-}
+
+  Future<void> _completeOrder() async {
+    final orderProvider = context.read<OrderProvider>();
+    final reportRepo = context.read<ReportRepository>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      final currentOrder = orderProvider.currentOrder;
+      if (currentOrder == null) {
+        throw Exception('Order tidak ditemukan');
+      }
+
+      final itemsData = currentOrder.items.map((item) {
+        return {
+          'product': item.product.name,
+          'quantity': item.quantity,
+          'price': item.product.price,
+        };
+      }).toList();
+
+      final report = Report(
+        type: ReportType.daily,
+        total: currentOrder.total,
+        date: DateTime.now(),
+        period: DateTime.now(),
+        createdAt: DateTime.now(),
+        data: {
+          'sales': {'items': itemsData},
+          'fuel': {'items': []} 
+        },
+      );
+
+      await reportRepo.generateReport(report);
+
+      if (mounted) {
+        await orderProvider.markOrderAsReported(widget.orderId);
+        await context.read<ReportProvider>().loadReports();
+        
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const ReportScreen()),
+            (route) => false,
+          );
+        }
+
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Laporan berhasil disimpan!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Error completing order: $e\n$stackTrace');
+
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Gagal: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
 }

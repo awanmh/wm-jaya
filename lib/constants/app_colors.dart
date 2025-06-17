@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Primary Colors
-  static const Color primary = Color(0xFFFFD700); // Warna Kuning Emas
-  static const Color secondary = Color(0xFF000000); // Warna Hitam
+  static const Color primary = Color.fromRGBO(255, 234, 0, 1);
+  static const Color secondary = Color(0xFF000000);
+  static const Color tertiary = Color.fromRGBO(0, 13, 94, 1);
+  static const Color quartenary = Color.fromRGBO(0, 78, 14, 1); // Warna Hitam
   static const Color background = Color(0xFFFFFFFF); // Warna Putih
   static const Color primaryDark = Color(0xFFFFD700);
 

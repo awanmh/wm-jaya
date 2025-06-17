@@ -13,11 +13,21 @@ class ProductProvider with ChangeNotifier {
 
   ProductProvider(this._repository);
 
+  // Getters
   List<Product> get products => _products;
   List<Product> get filteredProducts => _filteredProducts;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  
+  /// Getter untuk kategori mentah (digunakan untuk validasi)
   List<String> get categories => _categories;
+  
+  /// Getter untuk kategori yang akan ditampilkan di UI (dengan tambahan "Semua")
+  List<String> get categoriesForDisplay {
+    final displayList = List<String>.from(_categories);
+    displayList.insert(0, 'Semua');
+    return displayList;
+  }
 
   Future<void> loadProducts() async {
     _setLoading(true);
@@ -34,17 +44,9 @@ class ProductProvider with ChangeNotifier {
   }
 
   void _updateCategories() {
-    final categories = _products.map((p) => p.category).toSet().toList();
-    categories.insert(0, 'Semua');
-    _categories = categories;
-    notifyListeners();
-  }
-
-  Future<void> addCategory(String category) async {
-    if (!_categories.contains(category)) {
-      _categories.add(category);
-      notifyListeners();
-    }
+    // Fungsi ini sekarang hanya memperbarui list kategori mentah
+    final categorySet = _products.map((p) => p.category).toSet();
+    _categories = categorySet.toList()..sort(); // Urutkan berdasarkan abjad
   }
 
   Future<void> addProduct(Product product) async {
@@ -53,9 +55,7 @@ class ProductProvider with ChangeNotifier {
       final newProduct = await _repository.addProduct(product);
       _products.add(newProduct);
       _filteredProducts = List.from(_products);
-      if (!_categories.contains(product.category)) {
-        _categories.add(product.category);
-      }
+      _updateCategories();
       _errorMessage = null;
     } catch (e) {
       _handleError('Gagal menambah produk: ${e.toString()}');
@@ -68,10 +68,7 @@ class ProductProvider with ChangeNotifier {
     _setLoading(true);
     try {
       await _repository.deleteProduct(productId);
-      _products.removeWhere((p) => p.id == productId);
-      _filteredProducts = List.from(_products);
-      _updateCategories();
-      _errorMessage = null;
+      await loadProducts(); // Cara paling aman untuk sinkronisasi data
     } catch (e) {
       _handleError('Gagal menghapus produk: ${e.toString()}');
     } finally {
@@ -83,10 +80,7 @@ class ProductProvider with ChangeNotifier {
     _setLoading(true);
     try {
       await _repository.deleteProductsByCategory(category);
-      _products.removeWhere((p) => p.category == category);
-      _filteredProducts = List.from(_products);
-      _updateCategories();
-      _errorMessage = null;
+      await loadProducts(); // Muat ulang semua data agar konsisten
     } catch (e) {
       _handleError('Gagal menghapus kategori: ${e.toString()}');
     } finally {
@@ -98,17 +92,23 @@ class ProductProvider with ChangeNotifier {
     _setLoading(true);
     try {
       await _repository.updateProduct(updatedProduct);
-      final index = _products.indexWhere((p) => p.id == updatedProduct.id);
-      if (index != -1) {
-        _products[index] = updatedProduct;
-        _filteredProducts = List.from(_products);
-        if (!_categories.contains(updatedProduct.category)) {
-          _categories.add(updatedProduct.category);
-        }
-      }
-      _errorMessage = null;
+      await loadProducts(); // Muat ulang semua data agar konsisten
     } catch (e) {
       _handleError('Gagal memperbarui produk: ${e.toString()}');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // PERBAIKAN: Fungsi ini sekarang berada di dalam kelas dan menggunakan variabel yang benar
+  Future<void> updateCategory(String oldCategory, String newCategory) async {
+    _setLoading(true);
+    try {
+      await _repository.updateCategoryName(oldCategory, newCategory);
+      await loadProducts(); // Muat ulang produk untuk memperbarui UI
+    } catch (e) {
+      _handleError('Gagal memperbarui kategori: ${e.toString()}');
+      rethrow;
     } finally {
       _setLoading(false);
     }
@@ -124,17 +124,23 @@ class ProductProvider with ChangeNotifier {
   }
 
   void searchProducts(String query) {
-    _filteredProducts = _products.where((p) => p.name.toLowerCase().contains(query.toLowerCase())).toList();
+    if (query.isEmpty) {
+        _filteredProducts = List.from(_products);
+    } else {
+        _filteredProducts = _products
+            .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+    }
     notifyListeners();
   }
 
   void _setLoading(bool loading) {
+    if (_isLoading == loading) return;
     _isLoading = loading;
     notifyListeners();
   }
 
   void _handleError(String message) {
     _errorMessage = message;
-    notifyListeners();
   }
 }

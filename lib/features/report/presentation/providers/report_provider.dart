@@ -1,4 +1,4 @@
-// lib/features/report/presentation/providers/report_providers.dart
+// lib/features/report/presentation/providers/report_provider.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:wm_jaya/data/models/report.dart';
@@ -21,7 +21,7 @@ class ReportProvider with ChangeNotifier {
           end: DateTime.now(),
         );
 
-   // Getters
+    // Getters
   List<Report> get reports => _reports;
   ReportType get selectedType => _selectedType;
   DateTimeRange get dateRange => _dateRange;
@@ -89,6 +89,23 @@ class ReportProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+  
+  // =================================================================
+  // === PERBAIKAN DI SINI ===
+  // =================================================================
+  /// Mengambil detail lengkap dari sebuah laporan berdasarkan ID-nya.
+  /// Parameter reportId diubah menjadi int agar sesuai dengan repository.
+  Future<Report> getReportDetails(int reportId) async { // <-- Diubah menjadi int
+    try {
+      // Sekarang tidak ada lagi error tipe data
+      final detailedReport = await _repository.getReportById(reportId);
+      return detailedReport;
+    } catch (e) {
+      // Melempar error kembali agar bisa ditangkap oleh UI (ReportDetailScreen)
+      throw Exception('Gagal mendapatkan detail laporan: ${e.toString()}');
+    }
+  }
+  // =================================================================
 
   bool _isDataChanged(List<Report> newReports) {
     return newReports.length != _reports.length || 
@@ -120,10 +137,11 @@ class ReportProvider with ChangeNotifier {
 
   void _processChartData() {
     final newChartData = _reports.map((report) {
+      // Pastikan 'period' ada di objek Report
+      final labelDate = report.period;
       return {
-        'label': _getChartLabel(report.period),
-        'value': report.data['totalSales'] ?? 0.0,
-        'category': report.data['category'] ?? '',
+        'label': _getChartLabel(labelDate),
+        'value': report.total, // Menggunakan total dari report utama
       };
     }).toList();
 
@@ -137,7 +155,7 @@ class ReportProvider with ChangeNotifier {
       case ReportType.daily:
         return DateFormat('HH:mm').format(date);
       case ReportType.weekly:
-        return DateFormat('EEEE').format(date);
+        return DateFormat('EEE', 'id_ID').format(date); // Format hari dalam Bahasa Indonesia
       case ReportType.monthly:
         return DateFormat('dd MMM').format(date);
     }
@@ -145,36 +163,28 @@ class ReportProvider with ChangeNotifier {
 
   Future<void> exportReport(Report report, String format) async {
     try {
-      // Generate dan simpan report
-      await _repository.generateReport(report);
-      
-      // Tambahkan ke daftar reports
-      if (!_reports.contains(report)) {
-        _reports.add(report);
-        _processChartData();
-      }
+      await _repository.exportReportToFile(report);
     } catch (e) {
       _errorMessage = 'Ekspor gagal: ${e.toString()}';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+    notifyListeners();
   }
+
   Future<void> loadSavedReports() async {
     _reports = await _repository.getSavedReportsFromFiles();
     _processChartData();
     notifyListeners();
   }
-  // di report_providers.dart
-Future<void> deleteReport(Report report) async {
-  try {
-    await _repository.deleteReport(report);
-    _reports.removeWhere((r) => r.id == report.id);
-    _processChartData();
-    notifyListeners();
-  } catch (e) {
-    _errorMessage = 'Gagal menghapus laporan: ${e.toString()}';
-    notifyListeners();
+
+  Future<void> deleteReport(Report report) async {
+    try {
+      await _repository.deleteReport(report);
+      _reports.removeWhere((r) => r.id == report.id);
+      _processChartData();
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Gagal menghapus laporan: ${e.toString()}';
+      notifyListeners();
+    }
   }
-}
 }

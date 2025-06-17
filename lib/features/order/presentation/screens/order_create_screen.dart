@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:wm_jaya/constants/app_colors.dart';
 import 'package:wm_jaya/data/models/product.dart';
 import 'package:wm_jaya/features/order/presentation/providers/order_provider.dart';
 import 'package:wm_jaya/features/order/presentation/screens/order_detail_screen.dart';
@@ -30,7 +31,14 @@ class _OrderCreateScreenState extends State<OrderCreateScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.tertiary,
         title: const Text('Buat Order Baru'),
+        titleTextStyle: const TextStyle(
+          color: AppColors.tertiary,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.shopping_cart),

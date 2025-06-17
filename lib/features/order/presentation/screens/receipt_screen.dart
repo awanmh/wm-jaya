@@ -22,7 +22,14 @@ class ReceiptScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.tertiary,
         title: Text(AppStrings.receipt(orderId)),
+         titleTextStyle: const TextStyle(
+          color: AppColors.tertiary,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.print),

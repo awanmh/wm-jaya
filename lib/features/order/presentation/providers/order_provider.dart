@@ -1,47 +1,44 @@
 // lib/features/presentation/providers/order_provider.dart
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:wm_jaya/data/models/order.dart';
 import 'package:wm_jaya/data/models/product.dart';
 import 'package:wm_jaya/data/repositories/order_repository.dart';
 import 'package:wm_jaya/data/repositories/product_repository.dart';
-import 'package:flutter/material.dart';
 
 class OrderProvider with ChangeNotifier {
   final OrderRepository _orderRepository;
   final ProductRepository _productRepository;
 
+  // State untuk Data
   List<Order> _orders = [];
+  List<Product> _allProducts = []; // Daftar semua produk dari database
+  List<Product> _filteredProducts = []; // Daftar produk yang akan ditampilkan (setelah filter/pencarian)
   final List<OrderItem> _cartItems = [];
-  List<Product> _allProducts = [];
-  List<Product> _filteredProducts = [];
+  Order? _currentOrder;
+
+  // State untuk UI
   bool _isLoading = false;
   String? _errorMessage;
-  Order? _currentOrder;
 
   OrderProvider(this._orderRepository, this._productRepository);
 
-  // Getters
+  // === Getters ===
   List<Product> get filteredProducts => _filteredProducts;
   List<OrderItem> get cartItems => _cartItems;
-  double get totalAmount => _cartItems.fold(
-      0.0,
-      (sum, item) => sum + (item.product.price * item.quantity),
-    );
+  double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + (item.product.price * item.quantity));
   int get totalItems => _cartItems.fold(0, (sum, item) => sum + item.quantity);
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   Order? get currentOrder => _currentOrder;
-
-  Future<void> initialize() async {
-    await loadProducts();
-    await loadOrders();
-  }
-
-  // Product Management
+  
+  // === Manajemen Produk ===
+  /// Memuat semua produk dari repository dan menyiapkannya untuk ditampilkan.
   Future<void> loadProducts() async {
     _setLoading(true);
     try {
-      _allProducts = await _productRepository.getAllProducts();
+      _allProducts = await _productRepository.getProducts();
+      // Saat pertama kali dimuat, tampilkan semua produk yang memiliki stok
       _filteredProducts = _allProducts.where((p) => p.stock > 0).toList();
       _errorMessage = null;
     } catch (e) {
@@ -51,40 +48,33 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  Future<void> getOrderDetails(int orderId) async {
-    _setLoading(true);
-    try {
-      if (orderId <= 0) throw Exception('ID Order tidak valid');
-      _currentOrder = await _orderRepository.getOrderById(orderId);
-      if (_currentOrder == null) throw Exception('Order tidak ditemukan');
-      _errorMessage = null;
-    } catch (e) {
-      _handleError('Gagal memuat detail order: ${e.toString()}');
-      _currentOrder = null;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
+  /// Mencari produk berdasarkan nama.
   void searchProducts(String query) {
-    _filteredProducts = _allProducts.where((product) {
-      return product.name.toLowerCase().contains(query.toLowerCase()) && product.stock > 0;
-    }).toList();
+    if (query.isEmpty) {
+      // Jika query kosong, tampilkan semua produk yang memiliki stok
+      _filteredProducts = _allProducts.where((p) => p.stock > 0).toList();
+    } else {
+      // Jika ada query, cari produk berdasarkan nama dari semua produk
+      _filteredProducts = _allProducts
+          .where((product) =>
+              product.name.toLowerCase().contains(query.toLowerCase()) && product.stock > 0)
+          .toList();
+    }
     notifyListeners();
   }
 
-  // Cart Operations
+  // === Operasi Keranjang (Cart) ===
   void addToCart(Product product) {
     if (product.stock <= 0) return;
 
-    final updatedProduct = product.copyWith(stock: product.stock - 1);
-    _updateProductInLists(updatedProduct);
+    // Kurangi stok di list lokal
+    _updateLocalProductStock(product.id!, product.stock - 1);
 
     final index = _cartItems.indexWhere((item) => item.product.id == product.id);
     if (index >= 0) {
       _cartItems[index] = _cartItems[index].copyWith(quantity: _cartItems[index].quantity + 1);
     } else {
-      _cartItems.add(OrderItem(product: updatedProduct, quantity: 1, price: updatedProduct.price));
+      _cartItems.add(OrderItem(product: product, quantity: 1, price: product.price));
     }
     notifyListeners();
   }
@@ -92,9 +82,9 @@ class OrderProvider with ChangeNotifier {
   void removeFromCart(Product product) {
     final index = _cartItems.indexWhere((item) => item.product.id == product.id);
     if (index == -1) return;
-
-    final updatedProduct = product.copyWith(stock: product.stock + 1);
-    _updateProductInLists(updatedProduct);
+    
+    // Tambah stok di list lokal
+    _updateLocalProductStock(product.id!, product.stock + 1);
 
     if (_cartItems[index].quantity > 1) {
       _cartItems[index] = _cartItems[index].copyWith(quantity: _cartItems[index].quantity - 1);
@@ -105,12 +95,16 @@ class OrderProvider with ChangeNotifier {
   }
 
   void clearCart() {
-    _resetProductStock();
+    // Kembalikan semua stok produk yang ada di keranjang
+    for (final item in _cartItems) {
+      final originalProduct = _allProducts.firstWhere((p) => p.id == item.product.id);
+      _updateLocalProductStock(item.product.id!, originalProduct.stock);
+    }
     _cartItems.clear();
     notifyListeners();
   }
-
-  // Order Management
+  
+  // === Manajemen Pesanan (Order) ===
   Future<void> loadOrders() async {
     _setLoading(true);
     try {
@@ -122,27 +116,40 @@ class OrderProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-
-  Future<int> createOrder() async {
+  
+  Future<void> getOrderDetails(int orderId) async {
     _setLoading(true);
     try {
-      final paymentAmount = totalAmount;
-      debugPrint('Creating order with total: $paymentAmount');
+      if (orderId <= 0) throw Exception('ID Order tidak valid');
+      _currentOrder = await _orderRepository.getOrderById(orderId);
+    } catch (e) {
+      _handleError('Gagal memuat detail order: ${e.toString()}');
+      _currentOrder = null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<int> createOrder() async {
+    if (_cartItems.isEmpty) {
+      throw Exception('Keranjang belanja kosong.');
+    }
+    _setLoading(true);
+    try {
       final newOrder = Order(
         items: List.of(_cartItems),
         total: totalAmount,
-        payment: paymentAmount,
-        change: paymentAmount - totalAmount,
+        payment: totalAmount, // Asumsi pembayaran tunai pas
+        change: 0,
         date: DateTime.now(),
       );
+      // addOrder akan menangani update stok di database
       final orderId = await _orderRepository.addOrder(newOrder);
-      if (orderId == null) throw Exception('Gagal mendapatkan ID order.');
-
-      _orders.insert(0, newOrder.copyWith(id: orderId));
-      _cartItems.clear();
-      notifyListeners();
-
-      return orderId;
+      
+      _cartItems.clear(); // Kosongkan keranjang setelah berhasil
+      await loadProducts(); // Muat ulang produk untuk refresh stok di UI
+      
+      return orderId ?? -1;
     } catch (e) {
       _handleError('Gagal membuat order: ${e.toString()}');
       return -1;
@@ -152,45 +159,52 @@ class OrderProvider with ChangeNotifier {
   }
 
   Future<void> markOrderAsReported(int orderId) async {
-    _setLoading(true);
     try {
-      if (orderId <= 0) throw Exception('ID Order tidak valid');
       await _orderRepository.markOrderReported(orderId);
-
-      final index = _orders.indexWhere((order) => order.id == orderId);
-      if (index != -1) {
-        _orders[index] = _orders[index].copyWith(reportGenerated: true);
+      if (_currentOrder?.id == orderId) {
+        _currentOrder = _currentOrder?.copyWith(reportGenerated: true);
       }
-      _errorMessage = null;
       notifyListeners();
     } catch (e) {
-      _handleError('Gagal menandai order sebagai dilaporkan: ${e.toString()}');
+      _handleError('Gagal menandai order: ${e.toString()}');
+    }
+  }
+
+  Future<void> cancelOrder(int orderId) async {
+    _setLoading(true);
+    try {
+      await _orderRepository.deleteOrderAndRestoreStock(orderId);
+      _orders.removeWhere((order) => order.id == orderId);
+      await loadProducts(); // Muat ulang produk untuk refresh stok
+    } catch (e) {
+      _handleError('Gagal membatalkan pesanan: ${e.toString()}');
+      rethrow;
     } finally {
       _setLoading(false);
     }
   }
 
-  void _resetProductStock() {
-    for (final item in _cartItems) {
-      final originalProduct = item.product.copyWith(stock: item.product.stock + item.quantity);
-      _updateProductInLists(originalProduct);
+  // === Helper Internals ===
+  /// Mengupdate stok produk di list _allProducts dan _filteredProducts secara lokal
+  void _updateLocalProductStock(int productId, int newStock) {
+    int productIndex = _allProducts.indexWhere((p) => p.id == productId);
+    if(productIndex != -1) {
+      _allProducts[productIndex] = _allProducts[productIndex].copyWith(stock: newStock);
+    }
+    // Update juga di filtered list agar UI langsung berubah
+    int filteredIndex = _filteredProducts.indexWhere((p) => p.id == productId);
+    if(filteredIndex != -1) {
+      _filteredProducts[filteredIndex] = _filteredProducts[filteredIndex].copyWith(stock: newStock);
     }
   }
 
-  void _updateProductInLists(Product updatedProduct) {
-    _allProducts = _allProducts.map((p) => p.id == updatedProduct.id ? updatedProduct : p).toList();
-    _filteredProducts = _filteredProducts.map((p) => p.id == updatedProduct.id ? updatedProduct : p).toList();
-    _productRepository.updateProduct(updatedProduct);
-    notifyListeners();
-  }
-
   void _setLoading(bool loading) {
+    if (_isLoading == loading) return;
     _isLoading = loading;
     notifyListeners();
   }
 
   void _handleError(String message) {
     _errorMessage = message;
-    notifyListeners();
   }
 }

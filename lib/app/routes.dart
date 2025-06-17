@@ -7,13 +7,17 @@ import 'package:wm_jaya/features/order/presentation/screens/order_create_screen.
 import 'package:wm_jaya/features/product/presentation/screens/product_add_screen.dart';
 import 'package:wm_jaya/features/product/presentation/screens/product_edit_screen.dart';
 import 'package:wm_jaya/features/product/presentation/screens/product_list_screen.dart';
-import 'package:wm_jaya/features/report/presentation/screens/report_daily_screen.dart';
-import 'package:wm_jaya/features/report/presentation/screens/report_monthly_screen.dart';
-import 'package:wm_jaya/features/report/presentation/screens/report_weekly_screen.dart';
+// Import ReportScreen yang baru
+import 'package:wm_jaya/features/report/presentation/screens/report_screen.dart';
 import 'package:wm_jaya/features/settings/presentation/screens/app_info_screen.dart';
 import 'package:wm_jaya/features/settings/presentation/screens/backup_restore_screen.dart';
 import 'package:wm_jaya/features/settings/presentation/screens/settings_main_screen.dart';
 import 'package:wm_jaya/features/product/presentation/screens/qr_scanner_screen.dart';
+
+// Hapus import untuk layar individual yang tidak lagi digunakan sebagai rute
+// import 'package:wm_jaya/features/report/presentation/screens/report_daily_screen.dart';
+// import 'package:wm_jaya/features/report/presentation/screens/report_monthly_screen.dart';
+// import 'package:wm_jaya/features/report/presentation/screens/report_weekly_screen.dart';
 
 
 class AppRoutes {
@@ -35,10 +39,13 @@ class AppRoutes {
   // Fuel Routes
   static const String fuelPurchase = '/fuel/purchase';
   
-  // Report Routes
-  static const String dailyReport = '/reports/daily';
-  static const String weeklyReport = '/reports/weekly';
-  static const String monthlyReport = '/reports/monthly';
+  // PERBAIKAN: Hanya ada satu rute utama untuk laporan
+  static const String reports = '/reports';
+  
+  // Hapus rute individual
+  // static const String dailyReport = '/reports/daily';
+  // static const String weeklyReport = '/reports/weekly';
+  // static const String monthlyReport = '/reports/monthly';
   
   // Settings Routes
   static const String settings = '/settings';
@@ -80,16 +87,16 @@ class RouteGenerator {
         return MaterialPageRoute(
           builder: (_) => const QRScannerScreen(),
           fullscreenDialog: true // Untuk tampilan fullscreen
-      );
+        );
 
       case AppRoutes.addProduct:
         return MaterialPageRoute(builder: (_) => const ProductAddScreen());
       case AppRoutes.editProduct:
         if (args is String) {
           final productId = int.tryParse(args) ?? 0;
-           return MaterialPageRoute(
-            builder: (_) => ProductEditScreen(productId: productId), 
-          );
+            return MaterialPageRoute(
+              builder: (_) => ProductEditScreen(productId: productId), 
+            );
         }
         return _errorRoute();
       
@@ -101,13 +108,17 @@ class RouteGenerator {
       case AppRoutes.fuelPurchase:
         return MaterialPageRoute(builder: (_) => const FuelPurchaseScreen());
       
-      // Report
-      case AppRoutes.dailyReport:
-        return MaterialPageRoute(builder: (_) => const ReportDailyScreen());
-      case AppRoutes.weeklyReport:
-        return MaterialPageRoute(builder: (_) => const ReportWeeklyScreen());
-      case AppRoutes.monthlyReport:
-        return MaterialPageRoute(builder: (_) => const ReportMonthlyScreen());
+      // PERBAIKAN: Ganti rute laporan
+      case AppRoutes.reports:
+        return MaterialPageRoute(builder: (_) => const ReportScreen());
+        
+      // HAPUS rute-rute ini karena sudah tidak valid
+      // case AppRoutes.dailyReport:
+      //   return MaterialPageRoute(builder: (_) => const ReportDailyScreen());
+      // case AppRoutes.weeklyReport:
+      //   return MaterialPageRoute(builder: (_) => const ReportWeeklyScreen());
+      // case AppRoutes.monthlyReport:
+      //   return MaterialPageRoute(builder: (_) => const ReportMonthlyScreen());
       
       // Settings
       case AppRoutes.settings:
